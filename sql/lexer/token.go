@@ -6,7 +6,7 @@ const (
 	TokenEOF TokenType = iota
 	TokenError
 
-	TokenIdent
+	TokenIdent // Token identifier
 	TokenInt
 	TokenFloat
 	TokenString
@@ -18,6 +18,13 @@ const (
 	TokenRParen
 	TokenStar
 	TokenDot
+	TokenEq
+	TokenLT
+	TokenGT
+	TokenLE
+	TokenGE
+	TokenNE
+	TokenConcat
 )
 
 const (
