@@ -201,6 +201,9 @@ func (l *Lexer) readIdent() Token {
 		l.readChar()
 	}
 	lexeme := string(l.src[start:l.pos])
+
+	// default assumption is that we have a TokenIdent unless
+	// we have an explicit match with any keywords
 	typ := TokenIdent
 	if kw, ok := keywords[strings.ToLower(lexeme)]; ok {
 		typ = kw
@@ -216,6 +219,8 @@ func (l *Lexer) readNumber() Token {
 	if l.ch == '0' && (l.peekChar() == 'x' || l.peekChar() == 'X') {
 		l.readChar()
 		l.readChar()
+		// consume until we have exhausted all possible "ch" which could belong to
+		// a hex
 		for isHexDigit(l.ch) {
 			l.readChar()
 		}
@@ -311,7 +316,7 @@ func isDigit(ch byte) bool {
 	return ch >= '0' && ch <= '9'
 }
 
+// Not sure about this implementation but for now this is alright
 func isHexDigit(ch byte) bool {
 	return isDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')
 }
-
