@@ -41,66 +41,66 @@ func (l *Lexer) NextToken() Token {
 	line, col := l.line, l.col
 
 	switch l.ch {
-	case 0:
+	case eof:
 		return Token{Type: TokenEOF, Line: line, Col: col}
-	case ';':
+	case semicolon:
 		l.readChar()
 		return Token{Type: TokenSemicolon, Value: ";", Line: line, Col: col}
-	case ',':
+	case comma:
 		l.readChar()
 		return Token{Type: TokenComma, Value: ",", Line: line, Col: col}
-	case '(':
+	case lparen:
 		l.readChar()
 		return Token{Type: TokenLParen, Value: "(", Line: line, Col: col}
-	case ')':
+	case rparen:
 		l.readChar()
 		return Token{Type: TokenRParen, Value: ")", Line: line, Col: col}
-	case '*':
+	case star:
 		l.readChar()
 		return Token{Type: TokenStar, Value: "*", Line: line, Col: col}
-	case '.':
+	case dot:
 		if isDigit(l.peekChar()) {
 			return l.readNumber()
 		}
 		l.readChar()
 		return Token{Type: TokenDot, Value: ".", Line: line, Col: col}
-	case '"', '`', '[':
+	case doubleQuote, backtick, lBracket:
 		return l.readQuotedIdent(l.ch)
-	case '\'':
+	case singleQuote:
 		return l.readString()
-	case 'x', 'X':
-		if l.peekChar() == '\'' {
+	case xLower, xUpper:
+		if l.peekChar() == singleQuote {
 			return l.readBlob()
 		}
 		return l.readIdent()
-	case '=':
+	case equals:
 		l.readChar()
 		return Token{Type: TokenEq, Value: "=", Line: line, Col: col}
-	case '<':
-		if l.peekChar() == '=' {
+	case lt:
+		if l.peekChar() == equals {
 			l.readChar()
 			l.readChar()
 			// one readChar to move ch to "=" and the next readChar to
 			// move ch to the next byte such that next thing can be evaluated
 			return Token{Type: TokenLE, Value: "<=", Line: line, Col: col}
 		}
-		if l.peekChar() == '>' {
+		if l.peekChar() == gt {
 			l.readChar()
 			l.readChar()
 			return Token{Type: TokenNE, Value: "<>", Line: line, Col: col}
 		}
 		l.readChar()
 		return Token{Type: TokenLT, Value: "<", Line: line, Col: col}
-	case '>':
-		if l.peekChar() == '=' {
+	case gt:
+		if l.peekChar() == equals {
 			l.readChar()
 			l.readChar()
 			return Token{Type: TokenGE, Value: ">=", Line: line, Col: col}
 		}
 		l.readChar()
 		return Token{Type: TokenGT, Value: ">", Line: line, Col: col}
-	case '!':
-		if l.peekChar() == '=' {
+	case bang:
+		if l.peekChar() == equals {
 			l.readChar()
 			l.readChar()
 			return Token{Type: TokenNE, Value: "!=", Line: line, Col: col}
@@ -108,8 +108,8 @@ func (l *Lexer) NextToken() Token {
 		tok := Token{Type: TokenError, Value: fmt.Sprintf("unexpected byte %q", l.ch), Line: line, Col: col}
 		l.readChar()
 		return tok
-	case '|':
-		if l.peekChar() == '|' {
+	case pipe:
+		if l.peekChar() == pipe {
 			l.readChar()
 			l.readChar()
 			return Token{Type: TokenConcat, Value: "||", Line: line, Col: col}
@@ -118,7 +118,7 @@ func (l *Lexer) NextToken() Token {
 		l.readChar()
 		return tok
 	default:
-		if isLetter(l.ch) || l.ch == '_' {
+		if isLetter(l.ch) || l.ch == underscore {
 			return l.readIdent()
 		}
 		if isDigit(l.ch) {
@@ -138,12 +138,12 @@ Update line and col accordingly
 */
 func (l *Lexer) readChar() {
 	if l.nextPos >= len(l.src) {
-		l.ch = 0
+		l.ch = eof
 		l.pos = l.nextPos
 	} else {
 		l.ch = l.src[l.nextPos]
 		l.pos = l.nextPos
-		if l.ch == '\n' {
+		if l.ch == newline {
 			l.line++
 			l.col = 0
 		} else {
@@ -155,7 +155,7 @@ func (l *Lexer) readChar() {
 
 func (l *Lexer) peekChar() byte {
 	if l.nextPos >= len(l.src) {
-		return 0
+		return eof
 	}
 	return l.src[l.nextPos]
 }
@@ -163,22 +163,22 @@ func (l *Lexer) peekChar() byte {
 func (l *Lexer) skipWhitespaceAndComments() {
 	for {
 		switch l.ch {
-		case ' ', '\t', '\r', '\n':
+		case space, tab, cr, newline:
 			l.readChar()
-		case '-':
-			if l.peekChar() == '-' {
-				for l.ch != 0 && l.ch != '\n' {
+		case minus:
+			if l.peekChar() == minus {
+				for l.ch != eof && l.ch != newline {
 					l.readChar()
 				}
 			} else {
 				return
 			}
-		case '/':
-			if l.peekChar() == '*' {
+		case slash:
+			if l.peekChar() == star {
 				l.readChar()
 				l.readChar()
-				for l.ch != 0 {
-					if l.ch == '*' && l.peekChar() == '/' {
+				for l.ch != eof {
+					if l.ch == star && l.peekChar() == slash {
 						l.readChar()
 						l.readChar()
 						break
@@ -197,7 +197,7 @@ func (l *Lexer) skipWhitespaceAndComments() {
 func (l *Lexer) readIdent() Token {
 	line, col := l.line, l.col
 	start := l.pos
-	for isLetter(l.ch) || isDigit(l.ch) || l.ch == '_' || l.ch == '$' {
+	for isLetter(l.ch) || isDigit(l.ch) || l.ch == underscore || l.ch == dollar {
 		l.readChar()
 	}
 	lexeme := string(l.src[start:l.pos])
@@ -216,7 +216,7 @@ func (l *Lexer) readNumber() Token {
 	start := l.pos
 	typ := TokenInt
 
-	if l.ch == '0' && (l.peekChar() == 'x' || l.peekChar() == 'X') {
+	if l.ch == zero && (l.peekChar() == xLower || l.peekChar() == xUpper) {
 		l.readChar()
 		l.readChar()
 		// consume until we have exhausted all possible "ch" which could belong to
@@ -231,7 +231,7 @@ func (l *Lexer) readNumber() Token {
 		l.readChar()
 	}
 
-	if l.ch == '.' {
+	if l.ch == dot {
 		typ = TokenFloat
 		l.readChar()
 		for isDigit(l.ch) {
@@ -239,10 +239,10 @@ func (l *Lexer) readNumber() Token {
 		}
 	}
 
-	if l.ch == 'e' || l.ch == 'E' {
+	if l.ch == eLower || l.ch == eUpper {
 		typ = TokenFloat
 		l.readChar()
-		if l.ch == '+' || l.ch == '-' {
+		if l.ch == plus || l.ch == minus {
 			l.readChar()
 		}
 		for isDigit(l.ch) {
@@ -257,9 +257,9 @@ func (l *Lexer) readString() Token {
 	line, col := l.line, l.col
 	start := l.pos
 	l.readChar()
-	for l.ch != 0 {
-		if l.ch == '\'' {
-			if l.peekChar() == '\'' {
+	for l.ch != eof {
+		if l.ch == singleQuote {
+			if l.peekChar() == singleQuote {
 				l.readChar()
 				l.readChar()
 				continue
@@ -276,14 +276,14 @@ func (l *Lexer) readBlob() Token {
 	line, col := l.line, l.col
 	start := l.pos
 	l.readChar()
-	if l.ch != '\'' {
+	if l.ch != singleQuote {
 		return Token{Type: TokenError, Value: "expected ' after blob prefix", Line: line, Col: col}
 	}
 	l.readChar()
 	for isHexDigit(l.ch) {
 		l.readChar()
 	}
-	if l.ch != '\'' {
+	if l.ch != singleQuote {
 		return Token{Type: TokenError, Value: "malformed blob literal", Line: line, Col: col}
 	}
 	l.readChar()
@@ -294,11 +294,11 @@ func (l *Lexer) readQuotedIdent(quote byte) Token {
 	line, col := l.line, l.col
 	start := l.pos
 	close := quote
-	if quote == '[' {
-		close = ']'
+	if quote == lBracket {
+		close = rBracket
 	}
 	l.readChar()
-	for l.ch != 0 {
+	for l.ch != eof {
 		if l.ch == close {
 			l.readChar()
 			return Token{Type: TokenIdent, Value: string(l.src[start:l.pos]), Line: line, Col: col}
@@ -306,17 +306,4 @@ func (l *Lexer) readQuotedIdent(quote byte) Token {
 		l.readChar()
 	}
 	return Token{Type: TokenError, Value: "unterminated quoted identifier", Line: line, Col: col}
-}
-
-func isLetter(ch byte) bool {
-	return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
-}
-
-func isDigit(ch byte) bool {
-	return ch >= '0' && ch <= '9'
-}
-
-// Not sure about this implementation but for now this is alright
-func isHexDigit(ch byte) bool {
-	return isDigit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')
 }
