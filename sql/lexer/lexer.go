@@ -130,6 +130,12 @@ func (l *Lexer) NextToken() Token {
 	}
 }
 
+/*
+If we are not at the end
+read the next byte at "nextPos".
+Put that byte into "ch".
+Update line and col accordingly
+*/
 func (l *Lexer) readChar() {
 	if l.nextPos >= len(l.src) {
 		l.ch = eof
